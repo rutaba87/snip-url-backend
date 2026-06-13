@@ -4,10 +4,6 @@ const router = express.Router();
 const Url = require("../models/url");
 const { nanoid } = require("nanoid");
 
-// ROUTE 1: Shorten a URL
-// POST /api/shorten
-// React sends: { originalUrl: "https://very-long-url.com" }
-// We send back: { shortCode: "xK9mP", shortUrl: "http://localhost:5000/xK9mP" }
 router.post("/shorten", async (req, res) => {
   try {
     const { originalUrl } = req.body;
@@ -55,7 +51,27 @@ router.get("/links", async (req, res) => {
   }
 });
 
-// ── ROUTE 4: Get stats ────────────────────────────────────
+//route : 4 => get link by id
+// GET /api/links/:id
+// Fetch a single link by its MongoDB _id
+
+router.get("/links/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const url = await Url.findById(id);
+
+    if (!url) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    res.json(url);
+  } catch (err) {
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// ── ROUTE 4: Get all stats ────────────────────────────────────
 // GET /api/stats
 // Returns total links, total clicks, clicks today
 
@@ -82,6 +98,37 @@ router.get("/stats", async (req, res) => {
     });
 
     res.json({ totalLinks, totalClicks, todayClicks });
+  } catch (err) {
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+//Route for a single url stats
+// GET /api/links/:id/stats
+// Returns stats for a single URL
+
+router.get("/links/:id/stats", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const url = await Url.findById(id);
+
+    if (!url) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    res.json({
+      _id: url._id,
+      shortCode: url.shortCode,
+      shortUrl: `${process.env.BASE_URL}${url.shortCode}`,
+      originalUrl: url.originalUrl,
+      clicks: url.clicks,
+      createdAt: url.createdAt,
+      isClickedToday: url.updatedAt >= todayStart, // was it clicked today?
+    });
   } catch (err) {
     res.status(500).json({ error: "Something went wrong" });
   }
